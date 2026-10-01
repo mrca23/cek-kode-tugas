@@ -16,7 +16,7 @@ Buka https://mrca23.github.io/cek-kode-tugas/#barcode
 
 **Daftar biasa:**
 1. Tempel daftar No. Waybill / No. Bagging / Kode Tugas (satu per baris, atau pisahkan spasi/koma). Kalau file Monitor Sampai sudah dimasukkan di tab Cek Akurasi, bisa langsung ambil: kode tugas unik, AWB tidak cocok + kosong, atau semua AWB.
-2. Pilih jenis (Code 128 default; Code 39 hanya A-Z 0-9 - . $ / + % spasi), jumlah kolom, tinggi, teks, nomor urut, buang duplikat.
+2. Pilih jenis (Code 128 default; Code 39 hanya A-Z 0-9 - . $ / + % spasi), jumlah kolom (default 1 = berbaris ke bawah), tinggi, teks, nomor urut, buang duplikat.
 3. **Buat Barcode** -> **Cetak / Simpan PDF** (hanya barcode yang tercetak) atau **Unduh gambar (PNG)** (maks 300 barcode per gambar).
 **Jarak aman** (default Lebar 72px antar kolom) + quiet zone 11 modul kiri-kanan tiap barcode supaya scanner tidak ikut membaca barcode sebelahnya; kalau masih terbaca ganda pilih "Sangat lebar" atau Kolom 1. Batas 2.000 kode sekali buat. Barcode dibuat dengan [JsBarcode](https://github.com/lindell/JsBarcode), selalu hitam di atas putih.
 
