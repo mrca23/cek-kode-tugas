@@ -10,6 +10,18 @@
   function fmt(n) { return n.toLocaleString('id-ID'); }
   function setStatus(msg, cls) { var s = $('bcStatus'); s.textContent = msg; s.className = 'status' + (cls ? ' ' + cls : ''); }
   function pecah(teks) { return teks.split(/[\s,;]+/).map(function (s) { return s.trim(); }).filter(Boolean); }
+  // kode tugas J&T berawalan ZX (mis. ZXZB26030732611), bagging berawalan LY
+  function polaTugas(s) { return /^ZX[A-Z]*\d/i.test(s); }
+
+  // urutan kode -> grup. Kode pertama = kode tugas; kode berawalan ZX berikutnya = mulai kode tugas baru.
+  function kelompokkan(list) {
+    var grup = [], cur = null;
+    list.forEach(function (v) {
+      if (!cur || polaTugas(v)) { cur = { tugas: v, items: [] }; grup.push(cur); }
+      else cur.items.push(v);
+    });
+    return grup;
+  }
 
   // ---------- tab ----------
   function bukaTab(t) {
@@ -27,7 +39,7 @@
   function bacaInput() {
     var teks = $('bcInput').value;
     var grup = $('bcTugas').checked
-      ? teks.split(/\n\s*\n/).map(pecah).filter(function (l) { return l.length; }).map(function (l) { return { tugas: l[0], items: l.slice(1) }; })
+      ? teks.split(/\n\s*\n/).map(pecah).reduce(function (a, l) { return a.concat(kelompokkan(l)); }, [])
       : [{ tugas: '', items: pecah(teks) }];
     if ($('bcUnik').checked) {
       grup.forEach(function (g) {
@@ -40,7 +52,8 @@
 
   function opsi(format, besar) {
     return {
-      format: format, height: besar ? 70 : +$('bcTinggi').value, width: 2, margin: 6,
+      // quiet zone kiri-kanan 11 modul (standar Code128 minimal 10) supaya batas barcode jelas bagi scanner
+      format: format, height: besar ? 70 : +$('bcTinggi').value, width: 2, margin: 6, marginLeft: 22, marginRight: 22,
       displayValue: $('bcTeks').checked || besar, font: 'monospace', fontSize: besar ? 20 : 16, textMargin: 2,
       background: '#ffffff', lineColor: '#000000'
     };
@@ -66,19 +79,31 @@
     wadah.innerHTML = '';
     grupJadi = [];
     var frag = document.createDocumentFragment();
-    grup.forEach(function (g) {
+    var jarak = $('bcJarak').value + 'px';
+    var adaTugas = grup.filter(function (g) { return g.tugas; }).length;
+    if (adaTugas > 1) {
+      var nav = document.createElement('div');
+      nav.className = 'bc-ringkas';
+      nav.innerHTML = grup.map(function (g, gi) {
+        return '<a href="#bcGrup' + gi + '">' + esc(g.tugas || '(tanpa kode tugas)') + '<span>' + fmt(g.items.length) + ' bagging</span></a>';
+      }).join('');
+      frag.appendChild(nav);
+    }
+    grup.forEach(function (g, gi) {
       var items = g.items.map(function (s) { return format === 'CODE39' ? s.toUpperCase() : s; });
       var tugas = format === 'CODE39' ? g.tugas.toUpperCase() : g.tugas;
       if (items.length > sisa) { items = items.slice(0, sisa); lebih = true; }
       sisa -= items.length;
       var box = document.createElement('div');
       box.className = 'bc-grup';
+      box.id = 'bcGrup' + gi;
       var jadi = { tugas: '', items: [] };
       if (tugas) {
         var t = document.createElement('div');
         t.className = 'bc-tugas';
         var svgT = svgBarcode(tugas, format, true);
-        t.innerHTML = '<div class="judul"><span>KODE TUGAS</span><span>' + fmt(items.length) + ' bagging</span></div>';
+        t.innerHTML = '<div class="judul"><span>KODE TUGAS' + (adaTugas > 1 ? ' <span class="ke">' + (gi + 1) + ' dari ' + adaTugas + '</span>' : '') +
+          '</span><span>' + fmt(items.length) + ' bagging</span></div>';
         if (svgT) { t.appendChild(svgT); jadi.tugas = tugas; jml++; }
         else { t.innerHTML += '<div style="color:#c00000">' + esc(tugas) + ' tidak bisa dibuat dengan ' + format + '</div>'; gagal++; }
         box.appendChild(t);
@@ -86,6 +111,7 @@
       var grid = document.createElement('div');
       grid.className = 'bc-grid';
       grid.style.setProperty('--kolom', $('bcKolom').value);
+      grid.style.setProperty('--jarak', jarak);
       items.forEach(function (kode, i) {
         var div = document.createElement('div');
         div.className = 'bc-item';
@@ -123,15 +149,15 @@
   function pngGrup(g, format, nomor) {
     var items = g.items.slice(0, MAKS_PNG);
     var kanvas = items.map(function (it) { return kanvasBarcode(it.kode, format, false); });
-    var kol = +$('bcKolom').value, jarak = 16, nomorH = nomor ? 18 : 0;
+    var kol = +$('bcKolom').value, jarak = 16, jarakKol = Math.max(16, +$('bcJarak').value), jarakBaris = Math.round(jarakKol / 2.5) + 8, nomorH = nomor ? 18 : 0;
     var w = kanvas.length ? Math.max.apply(null, kanvas.map(function (c) { return c.width; })) : 0;
     var h = kanvas.length ? Math.max.apply(null, kanvas.map(function (c) { return c.height; })) + nomorH : 0;
     var baris = Math.ceil(kanvas.length / kol);
     var kt = g.tugas ? kanvasBarcode(g.tugas, format, true) : null;
     var ktH = kt ? kt.height + 24 + jarak : 0;
     var out = document.createElement('canvas');
-    out.width = Math.max(kol * w + (kol + 1) * jarak, kt ? kt.width + 2 * jarak : 0);
-    out.height = ktH + baris * h + (baris + 1) * jarak;
+    out.width = Math.max(kol * w + (kol - 1) * jarakKol + 2 * jarak, kt ? kt.width + 2 * jarak : 0);
+    out.height = ktH + Math.max(0, baris * h + (baris - 1) * jarakBaris) + 2 * jarak;
     var ctx = out.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, out.width, out.height);
     ctx.textBaseline = 'top';
@@ -143,7 +169,7 @@
     }
     ctx.fillStyle = '#555'; ctx.font = '600 13px system-ui, sans-serif';
     kanvas.forEach(function (c, i) {
-      var x = jarak + (i % kol) * (w + jarak), y = ktH + jarak + Math.floor(i / kol) * (h + jarak);
+      var x = jarak + (i % kol) * (w + jarakKol), y = ktH + jarak + Math.floor(i / kol) * (h + jarakBaris);
       if (nomor) ctx.fillText(String(items[i].no), x + 4, y);
       ctx.drawImage(c, x + Math.floor((w - c.width) / 2), y + nomorH);
     });
@@ -185,11 +211,11 @@
           var kol = aoa.reduce(function (m, row) { return Math.max(m, row.length); }, 0);
           for (var c = 0; c < kol; c++) {
             var isi = aoa.map(function (row) { return String(row[c] == null ? '' : row[c]).replace(/\s+/g, ''); }).filter(Boolean);
-            if (isi.length) grup.push(isi);
+            grup = grup.concat(kelompokkan(isi));
           }
         });
         if (!grup.length) { setStatus('File template kosong.', 'error'); return; }
-        $('bcInput').value = grup.map(function (l) { return l.join('\n'); }).join('\n\n');
+        $('bcInput').value = grup.map(function (g) { return [g.tugas].concat(g.items).join('\n'); }).join('\n\n');
         $('bcTugas').checked = true;
         buat();
         setStatus('Template "' + file.name + '": ' + $('bcStatus').textContent, $('bcStatus').className.indexOf('error') >= 0 ? 'error' : 'ok');
@@ -236,5 +262,9 @@
   $('bcKolom').addEventListener('change', function () {
     var v = this.value;
     Array.prototype.forEach.call(document.querySelectorAll('#bcGrid .bc-grid'), function (g) { g.style.setProperty('--kolom', v); });
+  });
+  $('bcJarak').addEventListener('change', function () {
+    var v = this.value + 'px';
+    Array.prototype.forEach.call(document.querySelectorAll('#bcGrid .bc-grid'), function (g) { g.style.setProperty('--jarak', v); });
   });
 })();

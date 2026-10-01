@@ -89,9 +89,10 @@
   .opsi .cek { display: flex; align-items: center; gap: 6px; cursor: pointer; }
   button:disabled { opacity: .45; cursor: default; }
   /* barcode selalu hitam di atas putih supaya bisa discan, juga di mode gelap */
-  .bc-grid { display: grid; grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)); gap: 10px; }
-  .bc-item { background: #fff; color: #000; border: 1px solid var(--line); border-radius: 8px; padding: 10px 8px 6px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-  .bc-item svg { display: block; width: 100%; height: auto; max-height: 160px; }
+  /* jarak antar kolom lebar + quiet zone di tiap barcode supaya scanner tidak ikut membaca barcode sebelahnya */
+  .bc-grid { display: grid; grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)); column-gap: var(--jarak, 72px); row-gap: calc(var(--jarak, 72px) / 2.5 + 8px); }
+  .bc-item { background: #fff; color: #000; border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px 8px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .bc-item svg { display: block; width: 100%; max-width: 520px; height: auto; max-height: 170px; margin: 0 auto; }
   .bc-item .no { font: 600 11px system-ui, sans-serif; color: #555; text-align: left; }
   .bc-item.gagal { background: #fff4f4; color: #c00000; font-size: 13px; padding: 14px 8px; }
   .drop-kecil { padding: 18px 16px; }
@@ -100,13 +101,19 @@
   .bc-tugas { background: #fff; color: #000; border: 2px solid #000; border-radius: 8px; padding: 10px 14px 8px; margin-bottom: 10px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
   .bc-tugas .judul { display: flex; justify-content: space-between; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; }
   .bc-tugas svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
-  @media (max-width: 640px) { .bc-grid { grid-template-columns: repeat(min(var(--kolom, 2), 2), minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .bc-grid { grid-template-columns: 1fr; } }
+  .bc-ringkas { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .bc-ringkas a { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; text-decoration: none; color: var(--text); font: 600 13px ui-monospace, Consolas, monospace; }
+  .bc-ringkas a span { color: var(--muted); font-family: system-ui, sans-serif; font-weight: 500; margin-left: 6px; }
+  .bc-ringkas a:hover { border-color: var(--accent); }
+  .bc-tugas .ke { color: #555; font-weight: 600; }
   @media print {
     body { background: #fff; }
     main { max-width: none; padding: 0; }
     main > *:not(#tabBarcode), #tabBarcode > *:not(.bc-hasil) { display: none !important; }
     .bc-hasil { border: 0; padding: 0; margin: 0; }
-    .bc-item { border: 1px dashed #bbb; border-radius: 0; }
+    .bc-item { border: 0; border-radius: 0; }
+    .bc-ringkas { display: none !important; }
     .bc-grup + .bc-grup { break-before: page; page-break-before: always; border-top: 0; margin-top: 0; padding-top: 0; }
     .bc-grid { grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)) !important; }
   }
@@ -219,7 +226,7 @@
     <section class="card">
       <label class="drop drop-kecil" id="bcDrop">
         <strong>Upload template kode tugas + bagging</strong>
-        <span>Excel: baris 1 = kode tugas, baris 2 dst = kode bagging (berurutan). Satu kolom = satu kode tugas.</span><br>
+        <span>Excel: baris 1 = kode tugas, baris 2 dst = kode bagging (berurutan). Banyak kode tugas: taruh di kolom B, C, ... atau lanjut di kolom yang sama (baris kode tugas berawalan ZX).</span><br>
         <span class="pilih">Pilih File Template</span>
         <input type="file" id="bcFile" accept=".xlsx,.xls,.csv">
       </label>
@@ -240,10 +247,13 @@
         <label>Kolom <select id="bcKolom">
           <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
         </select></label>
+        <label title="Jarak kosong antar barcode supaya scanner tidak membaca barcode sebelahnya">Jarak aman <select id="bcJarak">
+          <option value="16">Rapat</option><option value="40">Sedang</option><option value="72" selected>Lebar</option><option value="120">Sangat lebar</option>
+        </select></label>
         <label>Tinggi <select id="bcTinggi">
           <option value="40">Pendek</option><option value="60" selected>Sedang</option><option value="90">Tinggi</option>
         </select></label>
-        <label class="cek" title="Kode pertama = kode tugas, sisanya bagging. Pisahkan beberapa kode tugas dengan baris kosong."><input type="checkbox" id="bcTugas"> Baris pertama = kode tugas</label>
+        <label class="cek" title="Kode pertama = kode tugas, sisanya bagging. Kode berawalan ZX atau baris kosong = mulai kode tugas berikutnya."><input type="checkbox" id="bcTugas"> Baris pertama = kode tugas</label>
         <label class="cek"><input type="checkbox" id="bcTeks" checked> Tampilkan teks</label>
         <label class="cek"><input type="checkbox" id="bcNomor"> Nomor urut</label>
         <label class="cek"><input type="checkbox" id="bcUnik" checked> Buang duplikat</label>
@@ -264,6 +274,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="app.js?v=2"></script>
-<script src="barcode.js?v=2"></script>
+<script src="barcode.js?v=3"></script>
 </body>
 </html>

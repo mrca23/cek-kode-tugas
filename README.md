@@ -12,13 +12,13 @@ Web untuk membandingkan **Kode Tugas Kirim Station Sblm** dengan **Kode Tugas Sa
 ## Generator Barcode (tab kedua)
 Buka https://mrca23.github.io/cek-kode-tugas/#barcode
 
-**Template kode tugas + bagging** (upload Excel): kolom A baris 1 = kode tugas, baris 2 dst = kode bagging berurutan. Hasil: 1 barcode kode tugas (besar, di atas) + semua barcode bagging bernomor sesuai urutan baris. Beberapa kolom/sheet = beberapa kode tugas (tiap kode tugas mulai halaman baru saat dicetak, PNG satu file per kode tugas). Spasi di dalam sel dibuang. Bisa juga manual: centang "Baris pertama = kode tugas", pisahkan kode tugas dengan baris kosong.
+**Template kode tugas + bagging** (upload Excel): kolom A baris 1 = kode tugas, baris 2 dst = kode bagging berurutan. Hasil: 1 barcode kode tugas (besar, di atas) + semua barcode bagging bernomor sesuai urutan baris. Banyak kode tugas (mis. 5): taruh berjejer di kolom B, C, ... **atau** lanjut di kolom yang sama - kode berawalan `ZX` dianggap kode tugas baru (baris kosong boleh). Muncul ringkasan kode tugas + jumlah bagging di atas hasil. Beberapa kolom/sheet/kode tugas (tiap kode tugas mulai halaman baru saat dicetak, PNG satu file per kode tugas). Spasi di dalam sel dibuang. Bisa juga manual: centang "Baris pertama = kode tugas", pisahkan kode tugas dengan baris kosong.
 
 **Daftar biasa:**
 1. Tempel daftar No. Waybill / No. Bagging / Kode Tugas (satu per baris, atau pisahkan spasi/koma). Kalau file Monitor Sampai sudah dimasukkan di tab Cek Akurasi, bisa langsung ambil: kode tugas unik, AWB tidak cocok + kosong, atau semua AWB.
 2. Pilih jenis (Code 128 default; Code 39 hanya A-Z 0-9 - . $ / + % spasi), jumlah kolom, tinggi, teks, nomor urut, buang duplikat.
 3. **Buat Barcode** -> **Cetak / Simpan PDF** (hanya barcode yang tercetak) atau **Unduh gambar (PNG)** (maks 300 barcode per gambar).
-Batas 2.000 kode sekali buat. Barcode dibuat dengan [JsBarcode](https://github.com/lindell/JsBarcode), selalu hitam di atas putih.
+**Jarak aman** (default Lebar 72px antar kolom) + quiet zone 11 modul kiri-kanan tiap barcode supaya scanner tidak ikut membaca barcode sebelahnya; kalau masih terbaca ganda pilih "Sangat lebar" atau Kolom 1. Batas 2.000 kode sekali buat. Barcode dibuat dengan [JsBarcode](https://github.com/lindell/JsBarcode), selalu hitam di atas putih.
 
 ## Definisi
 | Istilah | Arti |
@@ -35,6 +35,7 @@ Dari nama kolom (baris header dicari di 15 baris pertama, baris yang mengandung 
 
 ## Uji
 `python test/uji_template.py "FILE SAMPEL.xlsx"` - uji template; urutan hasil scan PNG harus sama dengan urutan baris file.
+`python test/uji_multi.py` - uji 5 kode tugas (berjejer & ditumpuk).
 `python test/uji_barcode.py "<file Monitor Sampai>.xlsx"` - uji tab barcode; hasil PNG discan balik dengan `zxing-cpp`.
 `python test/uji.py "<file Monitor Sampai>.xlsx"` - butuh `playwright` (Python). Skrip membuat salinan uji dengan 10 kode beda + 5 kosong, mengecek angka di web, (hapus `test/uji.xlsx` setelah uji: berisi data pelanggan).
 
