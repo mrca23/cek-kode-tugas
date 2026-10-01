@@ -113,6 +113,7 @@
       var box = document.createElement('div');
       box.className = 'bc-grup';
       box.id = 'bcGrup' + gi;
+      box.setAttribute('data-tugas', tugas);
       var jadi = { tugas: '', items: [] };
       if (tugas) {
         var t = document.createElement('div');
@@ -155,6 +156,7 @@
       if (jadi.tugas || jadi.items.length) grupJadi.push(jadi);
     });
     wadah.appendChild(frag);
+    pasangNavigasi();
     $('bcHasilCard').classList.remove('hidden');
     $('bcCetak').disabled = $('bcUnduh').disabled = !jml;
     var nTugas = grupJadi.filter(function (g) { return g.tugas; }).length;
@@ -165,6 +167,50 @@
     if (info.lintas.length) msg += ' Bagging ada di lebih dari satu kode tugas: ' + info.lintas.slice(0, 5).join(', ') + (info.lintas.length > 5 ? ', ...' : '') + '.';
     if (bukanZX.length) msg += ' Periksa kode tugas yang tidak berawalan ZX: ' + bukanZX.slice(0, 3).join(', ') + '.';
     setStatus(msg, gagal || lebih || info.dobel || info.lintas.length || bukanZX.length ? 'error' : 'ok');
+  }
+
+  // ---------- navigasi: lebih dari 1 kode tugas -> tampil satu per satu (Sebelumnya / Berikutnya) ----------
+  // hanya di layar; Cetak dan PNG tetap memuat semua kode tugas
+  var aktif = 0;
+  function kotakGrup() { return Array.prototype.slice.call(document.querySelectorAll('#bcGrid .bc-grup')); }
+
+  function htmlNav(posisi) {
+    return '<div class="bc-nav bc-nav-' + posisi + '">' +
+      '<button class="sekunder" data-nav="-1">&lsaquo; Sebelumnya</button>' +
+      '<span class="bc-nav-ket"></span>' +
+      '<button data-nav="1">Berikutnya &rsaquo;</button></div>';
+  }
+
+  function pasangNavigasi() {
+    var kotak = kotakGrup();
+    if (kotak.length < 2) return;
+    var atas = document.createElement('div'); atas.innerHTML = htmlNav('atas');
+    kotak[0].parentNode.insertBefore(atas.firstChild, kotak[0]);
+    kotak.forEach(function (k) {
+      var bawah = document.createElement('div'); bawah.innerHTML = htmlNav('bawah');
+      k.appendChild(bawah.firstChild);
+    });
+    tampilGrup(0, false);
+  }
+
+  function tampilGrup(i, gulir) {
+    var kotak = kotakGrup(), n = kotak.length;
+    if (n < 2) return;
+    aktif = Math.max(0, Math.min(n - 1, i));
+    kotak.forEach(function (k, ki) { k.classList.toggle('sembunyi', ki !== aktif); });
+    var akhir = aktif === n - 1;
+    Array.prototype.forEach.call(document.querySelectorAll('#bcGrid .bc-nav'), function (nav) {
+      nav.querySelector('[data-nav="-1"]').disabled = aktif === 0;
+      var lanjut = nav.querySelector('[data-nav="1"]');
+      lanjut.disabled = akhir;
+      var berikut = kotak[aktif + 1] && kotak[aktif + 1].getAttribute('data-tugas');
+      lanjut.innerHTML = akhir ? 'Selesai' : (nav.classList.contains('bc-nav-bawah') && berikut ? 'Berikutnya: ' + esc(berikut) + ' &rsaquo;' : 'Berikutnya &rsaquo;');
+      nav.querySelector('.bc-nav-ket').textContent = 'Kode tugas ' + (aktif + 1) + ' dari ' + n + (akhir ? ' (terakhir)' : '');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#bcGrid .bc-ringkas a'), function (a) {
+      a.classList.toggle('aktif', 'bcGrup' + a.getAttribute('data-grup') === kotak[aktif].id);
+    });
+    if (gulir) $('bcHasilCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // ---------- unduh PNG: per kode tugas, dipecah per bagian kalau terlalu tinggi ----------
@@ -312,12 +358,19 @@
     setStatus(list.length ? fmt(list.length) + ' kode diambil dari file. Klik Buat Barcode.' : 'Tidak ada kode untuk pilihan ini.', list.length ? 'ok' : 'error');
   });
 
-  // daftar ringkas: gulir ke kode tugas tanpa mengubah alamat (#) supaya tab tidak berpindah
+  // daftar ringkas & tombol Sebelumnya/Berikutnya (tanpa mengubah alamat # supaya tab tidak berpindah)
   $('bcGrid').addEventListener('click', function (e) {
+    var nav = e.target.closest('.bc-nav button');
+    if (nav) {
+      nav.blur();   // lepas fokus: Enter dari scanner tidak boleh ikut menekan tombol
+      tampilGrup(aktif + +nav.getAttribute('data-nav'), true);
+      return;
+    }
     var a = e.target.closest('.bc-ringkas a'); if (!a) return;
     e.preventDefault();
-    var el = $('bcGrup' + a.getAttribute('data-grup'));
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    a.blur();
+    var idx = kotakGrup().map(function (k) { return k.id; }).indexOf('bcGrup' + a.getAttribute('data-grup'));
+    if (idx >= 0) tampilGrup(idx, true);
   });
   $('bcBuat').addEventListener('click', buat);
   $('bcCetak').addEventListener('click', function () { window.print(); });

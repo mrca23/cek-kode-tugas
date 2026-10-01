@@ -103,6 +103,17 @@
   .bc-tugas .judul { display: flex; justify-content: space-between; gap: 12px; margin: 0 -14px 8px; padding: 6px 14px; background: #000; color: #fff; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .bc-akhir { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 12px; margin-top: 28px; padding: 10px 14px; background: #fff; color: #000; border-top: 4px solid #000; border-bottom: 4px solid #000; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; break-inside: avoid; page-break-inside: avoid; break-before: avoid; page-break-before: avoid; }
   .bc-akhir b { font: 700 15px ui-monospace, Consolas, monospace; letter-spacing: 0; }
+  /* navigasi satu kode tugas per layar (hanya layar; cetak tetap semua) */
+  .bc-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .bc-nav-atas { margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .bc-nav-bawah { margin-top: 24px; }
+  .bc-nav-ket { font-weight: 600; color: var(--muted); font-size: 14px; }
+  .bc-nav button[data-nav="1"] { padding: 12px 22px; }
+  .bc-ringkas a.aktif { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  @media screen {
+    .bc-grup.sembunyi { display: none; }
+    .bc-nav-atas ~ .bc-grup { margin-top: 0; }
+  }
   .bc-tugas svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
   @media (max-width: 640px) { .bc-grid { grid-template-columns: 1fr; } }
   .bc-ringkas { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
@@ -116,7 +127,7 @@
     main > *:not(#tabBarcode), #tabBarcode > *:not(.bc-hasil) { display: none !important; }
     .bc-hasil { border: 0; padding: 0; margin: 0; }
     .bc-item { border: 0; border-radius: 0; }
-    .bc-ringkas { display: none !important; }
+    .bc-ringkas, .bc-nav { display: none !important; }
     .bc-grup + .bc-grup { break-before: page; page-break-before: always; border-top: 0; margin-top: 0; padding-top: 0; }
     .bc-grid { grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)) !important; }
   }
@@ -277,6 +288,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="app.js?v=3"></script>
-<script src="barcode.js?v=4"></script>
+<script src="barcode.js?v=5"></script>
 </body>
 </html>
