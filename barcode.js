@@ -1,14 +1,15 @@
 (function () {
   'use strict';
 
-  var MAKS = 2000;        // batas barcode sekali buat
+  var MAKS = 2000;        // batas barcode sekali buat (semua grup)
   var MAKS_PNG = 300;     // batas barcode per gambar PNG
   var $ = function (id) { return document.getElementById(id); };
-  var daftar = [];        // kode yang berhasil dibuat
+  var grupJadi = [];      // [{ tugas: 'ZXZB..' | '', items: ['LY..', ...] }] yang berhasil dibuat
 
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function fmt(n) { return n.toLocaleString('id-ID'); }
   function setStatus(msg, cls) { var s = $('bcStatus'); s.textContent = msg; s.className = 'status' + (cls ? ' ' + cls : ''); }
+  function pecah(teks) { return teks.split(/[\s,;]+/).map(function (s) { return s.trim(); }).filter(Boolean); }
 
   // ---------- tab ----------
   function bukaTab(t) {
@@ -20,99 +21,189 @@
   window.addEventListener('hashchange', function () { bukaTab(location.hash.slice(1)); });
   bukaTab(location.hash.slice(1));
 
-  // ---------- input ----------
+  // ---------- input -> grup ----------
+  // Mode kode tugas: tiap blok (dipisah baris kosong) = 1 grup, kode pertama = kode tugas.
+  // Mode biasa: semua kode = 1 grup tanpa kode tugas.
   function bacaInput() {
-    var list = $('bcInput').value.split(/[\s,;]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var teks = $('bcInput').value;
+    var grup = $('bcTugas').checked
+      ? teks.split(/\n\s*\n/).map(pecah).filter(function (l) { return l.length; }).map(function (l) { return { tugas: l[0], items: l.slice(1) }; })
+      : [{ tugas: '', items: pecah(teks) }];
     if ($('bcUnik').checked) {
-      var lihat = {};
-      list = list.filter(function (s) { var k = s.toUpperCase(); if (lihat[k]) return false; lihat[k] = 1; return true; });
+      grup.forEach(function (g) {
+        var lihat = {};
+        g.items = g.items.filter(function (s) { var k = s.toUpperCase(); if (lihat[k]) return false; lihat[k] = 1; return true; });
+      });
     }
-    return list;
+    return grup.filter(function (g) { return g.tugas || g.items.length; });
   }
 
-  function opsi(format) {
+  function opsi(format, besar) {
     return {
-      format: format, height: +$('bcTinggi').value, width: 2, margin: 6,
-      displayValue: $('bcTeks').checked, font: 'monospace', fontSize: 16, textMargin: 2,
+      format: format, height: besar ? 70 : +$('bcTinggi').value, width: 2, margin: 6,
+      displayValue: $('bcTeks').checked || besar, font: 'monospace', fontSize: besar ? 20 : 16, textMargin: 2,
       background: '#ffffff', lineColor: '#000000'
     };
   }
 
-  function buat() {
-    if (typeof JsBarcode === 'undefined') { setStatus('Library barcode gagal dimuat. Cek koneksi internet lalu muat ulang halaman.', 'error'); return; }
-    var list = bacaInput();
-    if (!list.length) { setStatus('Isi dulu daftar kode.', 'error'); return; }
-    var lebih = list.length > MAKS;
-    if (lebih) list = list.slice(0, MAKS);
-    var format = $('bcFormat').value;
-    if (format === 'CODE39') list = list.map(function (s) { return s.toUpperCase(); });
-    var grid = $('bcGrid');
-    grid.style.setProperty('--kolom', $('bcKolom').value);
-    grid.innerHTML = '';
-    daftar = [];
-    var gagal = [];
-    var nomor = $('bcNomor').checked;
-    var frag = document.createDocumentFragment();
-    list.forEach(function (kode, i) {
-      var div = document.createElement('div');
-      div.className = 'bc-item';
-      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      var ok = true;
-      try {
-        var o = opsi(format);
-        o.valid = function (v) { ok = v; };
-        JsBarcode(svg, kode, o);
-      } catch (e) { ok = false; }
-      if (ok) {
-        if (nomor) div.innerHTML = '<div class="no">' + (i + 1) + '</div>';
-        div.appendChild(svg);
-        daftar.push(kode);
-      } else {
-        div.className += ' gagal';
-        div.innerHTML = (nomor ? (i + 1) + '. ' : '') + esc(kode) + '<br>tidak bisa dibuat dengan ' + format;
-        gagal.push(kode);
-      }
-      frag.appendChild(div);
-    });
-    grid.appendChild(frag);
-    $('bcHasilCard').classList.remove('hidden');
-    $('bcCetak').disabled = $('bcUnduh').disabled = !daftar.length;
-    var msg = fmt(daftar.length) + ' barcode dibuat.';
-    if (gagal.length) msg += ' ' + fmt(gagal.length) + ' kode gagal (karakter tidak didukung ' + format + ').';
-    if (lebih) msg += ' Hanya ' + fmt(MAKS) + ' kode pertama yang dibuat.';
-    setStatus(msg, gagal.length || lebih ? 'error' : 'ok');
+  // gambar satu barcode ke svg; kembalikan svg atau null kalau kode tidak valid
+  function svgBarcode(kode, format, besar) {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    var ok = true;
+    try { var o = opsi(format, besar); o.valid = function (v) { ok = v; }; JsBarcode(svg, kode, o); } catch (e) { ok = false; }
+    return ok ? svg : null;
   }
 
-  // ---------- unduh PNG (satu lembar gambar berisi semua barcode) ----------
-  function unduhPng() {
-    if (!daftar.length) return;
-    var list = daftar.slice(0, MAKS_PNG);
-    var format = $('bcFormat').value, nomor = $('bcNomor').checked;
-    var kanvas = list.map(function (kode) { var c = document.createElement('canvas'); JsBarcode(c, kode, opsi(format)); return c; });
+  function buat() {
+    if (typeof JsBarcode === 'undefined') { setStatus('Library barcode gagal dimuat. Cek koneksi internet lalu muat ulang halaman.', 'error'); return; }
+    var grup = bacaInput();
+    if (!grup.length) { setStatus('Isi dulu daftar kode.', 'error'); return; }
+    var format = $('bcFormat').value;
+    var modeTugas = $('bcTugas').checked;
+    var nomor = $('bcNomor').checked || modeTugas;
+    var sisa = MAKS, lebih = false, jml = 0, gagal = 0;
+    var wadah = $('bcGrid');
+    wadah.innerHTML = '';
+    grupJadi = [];
+    var frag = document.createDocumentFragment();
+    grup.forEach(function (g) {
+      var items = g.items.map(function (s) { return format === 'CODE39' ? s.toUpperCase() : s; });
+      var tugas = format === 'CODE39' ? g.tugas.toUpperCase() : g.tugas;
+      if (items.length > sisa) { items = items.slice(0, sisa); lebih = true; }
+      sisa -= items.length;
+      var box = document.createElement('div');
+      box.className = 'bc-grup';
+      var jadi = { tugas: '', items: [] };
+      if (tugas) {
+        var t = document.createElement('div');
+        t.className = 'bc-tugas';
+        var svgT = svgBarcode(tugas, format, true);
+        t.innerHTML = '<div class="judul"><span>KODE TUGAS</span><span>' + fmt(items.length) + ' bagging</span></div>';
+        if (svgT) { t.appendChild(svgT); jadi.tugas = tugas; jml++; }
+        else { t.innerHTML += '<div style="color:#c00000">' + esc(tugas) + ' tidak bisa dibuat dengan ' + format + '</div>'; gagal++; }
+        box.appendChild(t);
+      }
+      var grid = document.createElement('div');
+      grid.className = 'bc-grid';
+      grid.style.setProperty('--kolom', $('bcKolom').value);
+      items.forEach(function (kode, i) {
+        var div = document.createElement('div');
+        div.className = 'bc-item';
+        var svg = svgBarcode(kode, format, false);
+        if (svg) {
+          if (nomor) div.innerHTML = '<div class="no">' + (i + 1) + '</div>';
+          div.appendChild(svg);
+          jadi.items.push({ no: i + 1, kode: kode });
+          jml++;
+        } else {
+          div.className += ' gagal';
+          div.innerHTML = (nomor ? (i + 1) + '. ' : '') + esc(kode) + '<br>tidak bisa dibuat dengan ' + format;
+          gagal++;
+        }
+        grid.appendChild(div);
+      });
+      box.appendChild(grid);
+      frag.appendChild(box);
+      if (jadi.tugas || jadi.items.length) grupJadi.push(jadi);
+    });
+    wadah.appendChild(frag);
+    $('bcHasilCard').classList.remove('hidden');
+    $('bcCetak').disabled = $('bcUnduh').disabled = !jml;
+    var msg = modeTugas
+      ? fmt(grup.length) + ' kode tugas, ' + fmt(jml - grupJadi.filter(function (g) { return g.tugas; }).length) + ' bagging dibuat.'
+      : fmt(jml) + ' barcode dibuat.';
+    if (gagal) msg += ' ' + fmt(gagal) + ' kode gagal (karakter tidak didukung ' + format + ').';
+    if (lebih) msg += ' Hanya ' + fmt(MAKS) + ' kode pertama yang dibuat.';
+    setStatus(msg, gagal || lebih ? 'error' : 'ok');
+  }
+
+  // ---------- unduh PNG: satu gambar per grup ----------
+  function kanvasBarcode(kode, format, besar) { var c = document.createElement('canvas'); JsBarcode(c, kode, opsi(format, besar)); return c; }
+
+  function pngGrup(g, format, nomor) {
+    var items = g.items.slice(0, MAKS_PNG);
+    var kanvas = items.map(function (it) { return kanvasBarcode(it.kode, format, false); });
     var kol = +$('bcKolom').value, jarak = 16, nomorH = nomor ? 18 : 0;
-    var w = Math.max.apply(null, kanvas.map(function (c) { return c.width; }));
-    var h = Math.max.apply(null, kanvas.map(function (c) { return c.height; })) + nomorH;
+    var w = kanvas.length ? Math.max.apply(null, kanvas.map(function (c) { return c.width; })) : 0;
+    var h = kanvas.length ? Math.max.apply(null, kanvas.map(function (c) { return c.height; })) + nomorH : 0;
     var baris = Math.ceil(kanvas.length / kol);
+    var kt = g.tugas ? kanvasBarcode(g.tugas, format, true) : null;
+    var ktH = kt ? kt.height + 24 + jarak : 0;
     var out = document.createElement('canvas');
-    out.width = kol * w + (kol + 1) * jarak;
-    out.height = baris * h + (baris + 1) * jarak;
+    out.width = Math.max(kol * w + (kol + 1) * jarak, kt ? kt.width + 2 * jarak : 0);
+    out.height = ktH + baris * h + (baris + 1) * jarak;
     var ctx = out.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, out.width, out.height);
-    ctx.fillStyle = '#555'; ctx.font = '600 13px system-ui, sans-serif'; ctx.textBaseline = 'top';
+    ctx.textBaseline = 'top';
+    if (kt) {
+      ctx.fillStyle = '#000'; ctx.font = '700 14px system-ui, sans-serif';
+      ctx.fillText('KODE TUGAS  -  ' + g.items.length + ' bagging', jarak, jarak);
+      ctx.drawImage(kt, Math.floor((out.width - kt.width) / 2), jarak + 22);
+      ctx.fillRect(jarak, ktH, out.width - 2 * jarak, 2);
+    }
+    ctx.fillStyle = '#555'; ctx.font = '600 13px system-ui, sans-serif';
     kanvas.forEach(function (c, i) {
-      var x = jarak + (i % kol) * (w + jarak), y = jarak + Math.floor(i / kol) * (h + jarak);
-      if (nomor) ctx.fillText(String(i + 1), x + 4, y);
+      var x = jarak + (i % kol) * (w + jarak), y = ktH + jarak + Math.floor(i / kol) * (h + jarak);
+      if (nomor) ctx.fillText(String(items[i].no), x + 4, y);
       ctx.drawImage(c, x + Math.floor((w - c.width) / 2), y + nomorH);
     });
-    out.toBlob(function (blob) {
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'barcode-' + list.length + '.png';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-    });
-    if (daftar.length > MAKS_PNG) setStatus('Gambar PNG hanya memuat ' + fmt(MAKS_PNG) + ' barcode pertama. Untuk semuanya pakai Cetak / Simpan PDF.', 'error');
+    return { kanvas: out, potong: g.items.length > MAKS_PNG };
   }
+
+  function unduhPng() {
+    if (!grupJadi.length) return;
+    var format = $('bcFormat').value, nomor = $('bcNomor').checked || $('bcTugas').checked;
+    var potong = false;
+    grupJadi.forEach(function (g, gi) {
+      var r = pngGrup(g, format, nomor);
+      potong = potong || r.potong;
+      r.kanvas.toBlob(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (g.tugas || 'barcode') + '-' + g.items.length + '.png';
+        // jeda antar unduhan supaya browser tidak memblokir unduhan beruntun
+        setTimeout(function () {
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        }, gi * 400);
+      });
+    });
+    if (potong) setStatus('Gambar PNG hanya memuat ' + fmt(MAKS_PNG) + ' barcode pertama per kode tugas. Untuk semuanya pakai Cetak / Simpan PDF.', 'error');
+  }
+
+  // ---------- upload template: baris 1 = kode tugas, baris 2 dst = bagging; satu kolom = satu grup ----------
+  function bacaTemplate(file) {
+    if (!file) return;
+    if (typeof XLSX === 'undefined') { setStatus('Library pembaca Excel gagal dimuat. Cek koneksi internet lalu muat ulang halaman.', 'error'); return; }
+    var r = new FileReader();
+    r.onload = function (e) {
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        var grup = [];
+        wb.SheetNames.forEach(function (n) {
+          var aoa = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '', blankrows: false });
+          var kol = aoa.reduce(function (m, row) { return Math.max(m, row.length); }, 0);
+          for (var c = 0; c < kol; c++) {
+            var isi = aoa.map(function (row) { return String(row[c] == null ? '' : row[c]).replace(/\s+/g, ''); }).filter(Boolean);
+            if (isi.length) grup.push(isi);
+          }
+        });
+        if (!grup.length) { setStatus('File template kosong.', 'error'); return; }
+        $('bcInput').value = grup.map(function (l) { return l.join('\n'); }).join('\n\n');
+        $('bcTugas').checked = true;
+        buat();
+        setStatus('Template "' + file.name + '": ' + $('bcStatus').textContent, $('bcStatus').className.indexOf('error') >= 0 ? 'error' : 'ok');
+      } catch (err) {
+        setStatus('Gagal membaca file: ' + (err && err.message ? err.message : err), 'error');
+      }
+    };
+    r.readAsArrayBuffer(file);
+  }
+  $('bcFile').addEventListener('change', function (e) { bacaTemplate(e.target.files[0]); e.target.value = ''; });
+  var drop = $('bcDrop');
+  ['dragenter', 'dragover'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('aktif'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('aktif'); }); });
+  drop.addEventListener('drop', function (e) { bacaTemplate(e.dataTransfer.files[0]); });
 
   // ---------- ambil dari file Monitor Sampai ----------
   document.addEventListener('cekkode:data', function () {
@@ -129,6 +220,7 @@
       list = data.filter(function (d) { return jenis === 'awbSemua' || d.st !== 'ok'; }).map(function (d) { return d.awb; });
     }
     $('bcInput').value = list.join('\n');
+    $('bcTugas').checked = false;
     setStatus(list.length ? fmt(list.length) + ' kode diambil dari file. Klik Buat Barcode.' : 'Tidak ada kode untuk pilihan ini.', list.length ? 'ok' : 'error');
   });
 
@@ -136,12 +228,13 @@
   $('bcCetak').addEventListener('click', function () { window.print(); });
   $('bcUnduh').addEventListener('click', unduhPng);
   $('bcHapus').addEventListener('click', function () {
-    $('bcInput').value = ''; $('bcGrid').innerHTML = ''; daftar = [];
+    $('bcInput').value = ''; $('bcGrid').innerHTML = ''; grupJadi = [];
     $('bcHasilCard').classList.add('hidden');
     $('bcCetak').disabled = $('bcUnduh').disabled = true;
     setStatus('');
   });
-  ['bcKolom'].forEach(function (id) {
-    $(id).addEventListener('change', function () { $('bcGrid').style.setProperty('--kolom', this.value); });
+  $('bcKolom').addEventListener('change', function () {
+    var v = this.value;
+    Array.prototype.forEach.call(document.querySelectorAll('#bcGrid .bc-grid'), function (g) { g.style.setProperty('--kolom', v); });
   });
 })();

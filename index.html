@@ -94,6 +94,12 @@
   .bc-item svg { display: block; width: 100%; height: auto; max-height: 160px; }
   .bc-item .no { font: 600 11px system-ui, sans-serif; color: #555; text-align: left; }
   .bc-item.gagal { background: #fff4f4; color: #c00000; font-size: 13px; padding: 14px 8px; }
+  .drop-kecil { padding: 18px 16px; }
+  .atau { margin: 14px 0 8px; }
+  .bc-grup + .bc-grup { margin-top: 22px; padding-top: 22px; border-top: 2px solid var(--line); }
+  .bc-tugas { background: #fff; color: #000; border: 2px solid #000; border-radius: 8px; padding: 10px 14px 8px; margin-bottom: 10px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .bc-tugas .judul { display: flex; justify-content: space-between; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; }
+  .bc-tugas svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
   @media (max-width: 640px) { .bc-grid { grid-template-columns: repeat(min(var(--kolom, 2), 2), minmax(0, 1fr)); } }
   @media print {
     body { background: #fff; }
@@ -101,6 +107,7 @@
     main > *:not(#tabBarcode), #tabBarcode > *:not(.bc-hasil) { display: none !important; }
     .bc-hasil { border: 0; padding: 0; margin: 0; }
     .bc-item { border: 1px dashed #bbb; border-radius: 0; }
+    .bc-grup + .bc-grup { break-before: page; page-break-before: always; border-top: 0; margin-top: 0; padding-top: 0; }
     .bc-grid { grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)) !important; }
   }
   @media (max-width: 640px) {
@@ -210,6 +217,13 @@
   <div id="tabBarcode" class="hidden">
     <p class="sub">Ubah daftar <b>No. Waybill</b>, <b>No. Bagging</b>, atau <b>Kode Tugas</b> menjadi barcode yang bisa dicetak atau diunduh.</p>
     <section class="card">
+      <label class="drop drop-kecil" id="bcDrop">
+        <strong>Upload template kode tugas + bagging</strong>
+        <span>Excel: baris 1 = kode tugas, baris 2 dst = kode bagging (berurutan). Satu kolom = satu kode tugas.</span><br>
+        <span class="pilih">Pilih File Template</span>
+        <input type="file" id="bcFile" accept=".xlsx,.xls,.csv">
+      </label>
+      <p class="def atau">atau ketik / tempel manual:</p>
       <label class="lbl" for="bcInput">Daftar kode (satu per baris, atau pisahkan dengan spasi / koma)</label>
       <textarea id="bcInput" class="bc-input" spellcheck="false" placeholder="JD0591869989&#10;ZXZB26030616080&#10;LY000019928878"></textarea>
       <div class="ambil hidden" id="bcAmbil">
@@ -229,6 +243,7 @@
         <label>Tinggi <select id="bcTinggi">
           <option value="40">Pendek</option><option value="60" selected>Sedang</option><option value="90">Tinggi</option>
         </select></label>
+        <label class="cek" title="Kode pertama = kode tugas, sisanya bagging. Pisahkan beberapa kode tugas dengan baris kosong."><input type="checkbox" id="bcTugas"> Baris pertama = kode tugas</label>
         <label class="cek"><input type="checkbox" id="bcTeks" checked> Tampilkan teks</label>
         <label class="cek"><input type="checkbox" id="bcNomor"> Nomor urut</label>
         <label class="cek"><input type="checkbox" id="bcUnik" checked> Buang duplikat</label>
@@ -242,13 +257,13 @@
       <p class="status" id="bcStatus"></p>
     </section>
     <section class="card bc-hasil hidden" id="bcHasilCard">
-      <div class="bc-grid" id="bcGrid"></div>
+      <div id="bcGrid"></div>
     </section>
   </div>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="app.js?v=2"></script>
-<script src="barcode.js?v=1"></script>
+<script src="barcode.js?v=2"></script>
 </body>
 </html>
