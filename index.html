@@ -97,16 +97,19 @@
   .bc-item.gagal { background: #fff4f4; color: #c00000; font-size: 13px; padding: 14px 8px; }
   .drop-kecil { padding: 18px 16px; }
   .atau { margin: 14px 0 8px; }
-  .bc-grup + .bc-grup { margin-top: 22px; padding-top: 22px; border-top: 2px solid var(--line); }
-  .bc-tugas { background: #fff; color: #000; border: 2px solid #000; border-radius: 8px; padding: 10px 14px 8px; margin-bottom: 10px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
-  .bc-tugas .judul { display: flex; justify-content: space-between; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; }
+  /* pemisah antar kode tugas: jarak besar + pita hitam MULAI + blok AKHIR (garis utuh saja, tanpa garis putus-putus) */
+  .bc-grup + .bc-grup { margin-top: 72px; }
+  .bc-tugas { background: #fff; color: #000; border: 3px solid #000; border-radius: 8px; padding: 0 14px 8px; margin-bottom: 18px; text-align: center; overflow: hidden; break-inside: avoid; page-break-inside: avoid; break-after: avoid; page-break-after: avoid; }
+  .bc-tugas .judul { display: flex; justify-content: space-between; gap: 12px; margin: 0 -14px 8px; padding: 6px 14px; background: #000; color: #fff; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bc-akhir { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 12px; margin-top: 28px; padding: 10px 14px; background: #fff; color: #000; border-top: 4px solid #000; border-bottom: 4px solid #000; font: 700 13px system-ui, sans-serif; letter-spacing: .04em; break-inside: avoid; page-break-inside: avoid; break-before: avoid; page-break-before: avoid; }
+  .bc-akhir b { font: 700 15px ui-monospace, Consolas, monospace; letter-spacing: 0; }
   .bc-tugas svg { display: block; width: 100%; max-width: 560px; height: auto; margin: 0 auto; }
   @media (max-width: 640px) { .bc-grid { grid-template-columns: 1fr; } }
   .bc-ringkas { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
   .bc-ringkas a { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; text-decoration: none; color: var(--text); font: 600 13px ui-monospace, Consolas, monospace; }
   .bc-ringkas a span { color: var(--muted); font-family: system-ui, sans-serif; font-weight: 500; margin-left: 6px; }
   .bc-ringkas a:hover { border-color: var(--accent); }
-  .bc-tugas .ke { color: #555; font-weight: 600; }
+
   @media print {
     body { background: #fff; }
     main { max-width: none; padding: 0; }
@@ -273,7 +276,7 @@
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
-<script src="app.js?v=2"></script>
-<script src="barcode.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<script src="barcode.js?v=4"></script>
 </body>
 </html>

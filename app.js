@@ -129,7 +129,6 @@
       });
     });
     render();
-    document.dispatchEvent(new CustomEvent('cekkode:data'));
   }
 
   function hitung(list) {
@@ -155,6 +154,7 @@
     }).join('') : '';
     renderGrup();
     renderDetail();
+    document.dispatchEvent(new CustomEvent('cekkode:data'));
   }
 
   function renderGrup() {
