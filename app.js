@@ -129,6 +129,7 @@
       });
     });
     render();
+    document.dispatchEvent(new CustomEvent('cekkode:data'));
   }
 
   function hitung(list) {
@@ -209,6 +210,9 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   }
+
+  // dipakai barcode.js (ambil daftar kode dari file yang sudah dimuat)
+  window.cekKodeTugas = { data: function () { return data; } };
 
   // ---------- event ----------
   $('file').addEventListener('change', function (e) { muat(e.target.files); e.target.value = ''; });

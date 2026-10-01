@@ -77,6 +77,32 @@
   .def { font-size: 14px; color: var(--muted); }
   .def b { color: var(--text); }
   .hidden { display: none !important; }
+  .tab { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 14px 0 18px; overflow-x: auto; }
+  .tab a { padding: 9px 14px; color: var(--muted); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .tab a.aktif { color: var(--accent); border-bottom-color: var(--accent); }
+  .lbl { display: block; font-weight: 600; margin-bottom: 6px; }
+  .bc-input { width: 100%; min-height: 140px; font: 14px/1.5 ui-monospace, Consolas, monospace; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
+  .bc-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .ambil { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .opsi { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 14px 0; font-size: 14px; }
+  .opsi select { font: inherit; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); margin-left: 4px; }
+  .opsi .cek { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  /* barcode selalu hitam di atas putih supaya bisa discan, juga di mode gelap */
+  .bc-grid { display: grid; grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)); gap: 10px; }
+  .bc-item { background: #fff; color: #000; border: 1px solid var(--line); border-radius: 8px; padding: 10px 8px 6px; text-align: center; break-inside: avoid; page-break-inside: avoid; }
+  .bc-item svg { display: block; width: 100%; height: auto; max-height: 160px; }
+  .bc-item .no { font: 600 11px system-ui, sans-serif; color: #555; text-align: left; }
+  .bc-item.gagal { background: #fff4f4; color: #c00000; font-size: 13px; padding: 14px 8px; }
+  @media (max-width: 640px) { .bc-grid { grid-template-columns: repeat(min(var(--kolom, 2), 2), minmax(0, 1fr)); } }
+  @media print {
+    body { background: #fff; }
+    main { max-width: none; padding: 0; }
+    main > *:not(#tabBarcode), #tabBarcode > *:not(.bc-hasil) { display: none !important; }
+    .bc-hasil { border: 0; padding: 0; margin: 0; }
+    .bc-item { border: 1px dashed #bbb; border-radius: 0; }
+    .bc-grid { grid-template-columns: repeat(var(--kolom, 2), minmax(0, 1fr)) !important; }
+  }
   @media (max-width: 640px) {
     main { padding-top: 20px; }
     .hero { grid-template-columns: 1fr; }
@@ -88,6 +114,12 @@
 <body>
 <main>
   <h1>Cek Kode Tugas</h1>
+  <nav class="tab" id="tabNav">
+    <a href="#cek" data-tab="cek" class="aktif">Cek Akurasi</a>
+    <a href="#barcode" data-tab="barcode">Generator Barcode</a>
+  </nav>
+
+  <div id="tabCek">
   <p class="sub">Bandingkan <b>Kode Tugas Kirim Station Sblm</b> dengan <b>Kode Tugas Sampai</b> dari export Monitor Sampai, lalu hitung persen akurasinya.</p>
 
   <section class="card">
@@ -173,8 +205,50 @@
       <b>Akurasi</b> = Cocok / Total AWB x 100%. AWB yang sama muncul lebih dari sekali dihitung satu kali (baris pertama).</p>
     </section>
   </div>
+  </div>
+
+  <div id="tabBarcode" class="hidden">
+    <p class="sub">Ubah daftar <b>No. Waybill</b>, <b>No. Bagging</b>, atau <b>Kode Tugas</b> menjadi barcode yang bisa dicetak atau diunduh.</p>
+    <section class="card">
+      <label class="lbl" for="bcInput">Daftar kode (satu per baris, atau pisahkan dengan spasi / koma)</label>
+      <textarea id="bcInput" class="bc-input" spellcheck="false" placeholder="JD0591869989&#10;ZXZB26030616080&#10;LY000019928878"></textarea>
+      <div class="ambil hidden" id="bcAmbil">
+        <span class="def">Ambil dari file Monitor Sampai yang sudah dimasukkan:</span>
+        <button class="sekunder" data-ambil="kodeTugas">Kode tugas unik</button>
+        <button class="sekunder" data-ambil="awbMasalah">AWB tidak cocok + kosong</button>
+        <button class="sekunder" data-ambil="awbSemua">Semua AWB</button>
+      </div>
+      <div class="opsi">
+        <label>Jenis <select id="bcFormat">
+          <option value="CODE128">Code 128 (umum, J&amp;T)</option>
+          <option value="CODE39">Code 39</option>
+        </select></label>
+        <label>Kolom <select id="bcKolom">
+          <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
+        </select></label>
+        <label>Tinggi <select id="bcTinggi">
+          <option value="40">Pendek</option><option value="60" selected>Sedang</option><option value="90">Tinggi</option>
+        </select></label>
+        <label class="cek"><input type="checkbox" id="bcTeks" checked> Tampilkan teks</label>
+        <label class="cek"><input type="checkbox" id="bcNomor"> Nomor urut</label>
+        <label class="cek"><input type="checkbox" id="bcUnik" checked> Buang duplikat</label>
+      </div>
+      <div class="tombol">
+        <button id="bcBuat">Buat Barcode</button>
+        <button class="sekunder" id="bcCetak" disabled>Cetak / Simpan PDF</button>
+        <button class="sekunder" id="bcUnduh" disabled>Unduh gambar (PNG)</button>
+        <button class="sekunder" id="bcHapus">Kosongkan</button>
+      </div>
+      <p class="status" id="bcStatus"></p>
+    </section>
+    <section class="card bc-hasil hidden" id="bcHasilCard">
+      <div class="bc-grid" id="bcGrid"></div>
+    </section>
+  </div>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="app.js?v=1"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="app.js?v=2"></script>
+<script src="barcode.js?v=1"></script>
 </body>
 </html>
