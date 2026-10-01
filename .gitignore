@@ -1,0 +1,6 @@
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+*.png
+test/

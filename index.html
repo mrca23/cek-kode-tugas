@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cek Kode Tugas</title>
+<meta name="description" content="Bandingkan Kode Tugas Kirim Station Sblm dengan Kode Tugas Sampai dari export Monitor Sampai JMS. File diolah di browser, tidak di-upload ke server.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23c00000'/><path d='M8 16.5l5 5 11-11' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<style>
+  :root {
+    --bg: #f6f6f4; --card: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e2e1dc; --row: #fafaf8;
+    --accent: #c00000; --accent-soft: #fbeaea; --ok: #1f7a3a; --ok-soft: #e4f3e8; --warn: #9a6400; --warn-soft: #fbf1dc; --on-accent: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --card: #1f1f1d; --text: #ecebe6; --muted: #a09f98; --line: #34332f; --row: #242422;
+      --accent: #ff6b6b; --accent-soft: #3a2121; --ok: #6fcf8d; --ok-soft: #1e3326; --warn: #e8b453; --warn-soft: #3a3020; --on-accent: #1a0d0d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --card: #1f1f1d; --text: #ecebe6; --muted: #a09f98; --line: #34332f; --row: #242422;
+    --accent: #ff6b6b; --accent-soft: #3a2121; --ok: #6fcf8d; --ok-soft: #1e3326; --warn: #e8b453; --warn-soft: #3a3020; --on-accent: #1a0d0d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 17px; margin: 0; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .drop { position: relative; display: block; border: 2px dashed var(--line); border-radius: 10px; padding: 28px 16px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+  .drop:hover, .drop.aktif { border-color: var(--accent); background: var(--accent-soft); }
+  .drop strong { display: block; font-size: 16px; margin-bottom: 4px; }
+  .drop span { color: var(--muted); font-size: 14px; }
+  .drop input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+  .drop .pilih { display: inline-block; margin-top: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; border-radius: 8px; padding: 9px 18px; }
+  .drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .privasi { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+  .status { margin: 14px 0 0; font-size: 14px; min-height: 21px; }
+  .status.error { color: var(--accent); }
+  .status.ok { color: var(--ok); }
+  button { font: inherit; font-weight: 600; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+  button.sekunder { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; padding: 7px 14px; }
+  button.sekunder.aktif { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .baris { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .tombol { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hero { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 20px; align-items: center; }
+  .persen { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .persen.ok { color: var(--ok); } .persen.warn { color: var(--warn); } .persen.bad { color: var(--accent); }
+  .persen-lbl { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); }
+  .bar i { display: block; height: 100%; }
+  .bar .b-ok { background: var(--ok); } .bar .b-beda { background: var(--accent); } .bar .b-kosong { background: var(--warn); }
+  .stat { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .stat div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 13px; color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .tabel { overflow-x: auto; max-height: 520px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; position: sticky; top: 0; background: var(--card); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.mono { font-family: ui-monospace, Consolas, monospace; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr:nth-child(even) td { background: var(--row); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 1px 9px; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); }
+  .tag.beda { background: var(--accent-soft); color: var(--accent); }
+  .tag.kosong { background: var(--warn-soft); color: var(--warn); }
+  .kosong-info { color: var(--muted); padding: 18px; text-align: center; }
+  .kolom table { margin-top: 10px; }
+  .kolom td { white-space: normal; vertical-align: top; }
+  .kolom select, .filter select, .filter input { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); max-width: 100%; }
+  .filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filter input { flex: 1 1 200px; }
+  .def { font-size: 14px; color: var(--muted); }
+  .def b { color: var(--text); }
+  .hidden { display: none !important; }
+  @media (max-width: 640px) {
+    main { padding-top: 20px; }
+    .hero { grid-template-columns: 1fr; }
+    .stat { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .persen { font-size: 46px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cek Kode Tugas</h1>
+  <p class="sub">Bandingkan <b>Kode Tugas Kirim Station Sblm</b> dengan <b>Kode Tugas Sampai</b> dari export Monitor Sampai, lalu hitung persen akurasinya.</p>
+
+  <section class="card">
+    <label class="drop" id="drop">
+      <strong>Tarik file Monitor Sampai ke sini</strong>
+      <span>Export JMS "Monitor Sampai (Refine)(Detail)" .xlsx / .xls / .csv, boleh lebih dari satu file</span><br>
+      <span class="pilih">Pilih File</span>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" multiple>
+    </label>
+    <p class="privasi">File diolah langsung di browser ini. Tidak ada data yang dikirim ke server.</p>
+    <p class="status" id="status"></p>
+  </section>
+
+  <div id="hasil" class="hidden">
+    <section class="card">
+      <div class="hero">
+        <div>
+          <div class="persen" id="persen">-</div>
+          <div class="persen-lbl">Akurasi kode tugas (<span id="persenKet"></span>)</div>
+        </div>
+        <div>
+          <div class="bar" id="bar"></div>
+          <div class="stat">
+            <div><b id="sTotal">0</b><span>Total AWB</span></div>
+            <div><b id="sOk">0</b><span><i class="dot" style="background:var(--ok)"></i>Cocok</span></div>
+            <div><b id="sBeda">0</b><span><i class="dot" style="background:var(--accent)"></i>Tidak cocok</span></div>
+            <div><b id="sKosong">0</b><span><i class="dot" style="background:var(--warn)"></i>Kode kosong</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="baris">
+        <h2>Rekap per</h2>
+        <div class="tombol" id="grupBtn">
+          <button class="sekunder aktif" data-grup="kirim">Kode Tugas Kirim</button>
+          <button class="sekunder" data-grup="sampai">Kode Tugas Sampai</button>
+          <button class="sekunder" data-grup="dp">Drop Point</button>
+          <button class="sekunder" data-grup="scan">Discan oleh</button>
+          <button class="sekunder" data-grup="asal">Lokasi Sebelumnya</button>
+        </div>
+      </div>
+      <div class="tabel"><table>
+        <thead><tr><th id="grupJudul">Kode Tugas Kirim</th><th class="num">Total AWB</th><th class="num">Cocok</th><th class="num">Tidak cocok</th><th class="num">Kode kosong</th><th class="num">Akurasi</th></tr></thead>
+        <tbody id="grupBody"></tbody>
+      </table></div>
+    </section>
+
+    <section class="card">
+      <div class="baris">
+        <h2>Detail AWB</h2>
+        <button class="sekunder" id="unduh">Unduh CSV (sesuai filter)</button>
+      </div>
+      <div class="filter">
+        <select id="fStatus">
+          <option value="masalah">Tidak cocok + kode kosong</option>
+          <option value="beda">Tidak cocok saja</option>
+          <option value="kosong">Kode kosong saja</option>
+          <option value="ok">Cocok saja</option>
+          <option value="semua">Semua AWB</option>
+        </select>
+        <input id="fCari" type="search" placeholder="Cari No. Waybill / kode tugas / nama scan">
+      </div>
+      <div class="tabel"><table>
+        <thead><tr><th>No. Waybill</th><th>Status</th><th>Kode Tugas Kirim</th><th>Kode Tugas Sampai</th><th>Waktu Kirim</th><th>Waktu Sampai</th><th>Drop Point</th><th>Discan oleh</th></tr></thead>
+        <tbody id="detailBody"></tbody>
+      </table></div>
+      <p class="def" id="detailInfo"></p>
+    </section>
+
+    <section class="card kolom">
+      <h2>Kolom terdeteksi</h2>
+      <p class="def">Dikenali otomatis dari nama kolom. Kalau salah, ganti manual di sini.</p>
+      <div class="tabel"><table><thead><tr><th>Data</th><th>Kolom di file</th><th>Contoh isi</th></tr></thead><tbody id="kolomBody"></tbody></table></div>
+    </section>
+
+    <section class="card def">
+      <h2 style="color:var(--text);margin-bottom:8px">Definisi</h2>
+      <p><b>Cocok</b>: Kode Tugas Kirim Station Sblm sama persis dengan Kode Tugas Sampai (spasi di depan/belakang & huruf besar/kecil diabaikan).<br>
+      <b>Tidak cocok</b>: dua kode terisi tapi berbeda (paket discan sampai dengan kode tugas lain).<br>
+      <b>Kode kosong</b>: salah satu atau kedua kode tidak terisi.<br>
+      <b>Akurasi</b> = Cocok / Total AWB x 100%. AWB yang sama muncul lebih dari sekali dihitung satu kali (baris pertama).</p>
+    </section>
+  </div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
